@@ -1,0 +1,4 @@
+This is sample project to AVR projects. Includes is used for .h/.hpp files,
+lib for external libraries used in project and scr is for code.
+
+Edit makefile to specify type of uC and compilation flags. 

@@ -1,0 +1,13 @@
+74141 pins:
+A - PB2
+B - PB1
+C - PB0
+D - PD6
+
+DS18B20:
+DQ - PD3
+
+tubes katodes:
+V3 - PD2
+V2 - PD1
+V1 - PD0
