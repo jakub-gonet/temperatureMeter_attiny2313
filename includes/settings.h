@@ -1,4 +1,6 @@
-#ifndef HEADER_C_H
-#define HEADER_C_H
+#ifndef SETTINGS_C_H
+#define SETTINGS_C_H
+
+#define F_CPU 1000000L
 
 #endif
