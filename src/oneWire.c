@@ -3,14 +3,22 @@
 #include <avr/io.h>
 #include <util/delay.h>
 
+/*
+  Documentation:
+  https://datasheets.maximintegrated.com/en/ds/DS18B20.pdf
+*/
+
 uint8_t oneWire_readBit();
 void oneWire_writeBit(uint8_t bit);
 
 /*
   Resets 1 wire line, then checks if any slave DS18B20 is present
 
-  Documentation, page 15:
-  https://datasheets.maximintegrated.com/en/ds/DS18B20.pdf
+  Pulling a bus down for min 480us initializes reset.
+  After releasing the bus master will go into receive mode.
+  DS18B20 will pull the bus down after 15-60us and this pulldown will last 60-240us.
+
+  Receiving mode should last min 480us.
 */
 uint8_t oneWire_ResetAndPresenceCheck(void){
   PORT_1WIRE &= ~(1<<P_1WIRE);
