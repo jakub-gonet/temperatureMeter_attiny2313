@@ -13,6 +13,7 @@ void oneWire_writeBit(uint8_t bit);
 
 /*
   Resets 1 wire line, then checks if any slave DS18B20 is present
+  Delays sum: 1000us
 
   Pulling a bus down for min 480us initializes reset.
   After releasing the bus master will go into receive mode.
@@ -34,6 +35,7 @@ uint8_t oneWire_ResetAndPresenceCheck(void){
 
 /*
   Sends one bit to a slave
+  Delays sum: 85us
 
   Pulling a bus down initializes write time slot, which lasts 60us.
   DS18B20 will read the data from 15us to end of the time slot after releasing the bus.
@@ -56,15 +58,16 @@ void oneWire_sendBit(uint8_t bit){
 
 /*
   Sends one byte to slave
+  Delays sum: 85*8=680us
 */
 void oneWire_sendByte(uint8_t byte){
   for(uint8_t i=0; i < 8; i++){
     oneWire_sendBit((byte >> i) & 0x1);
   }
-
 }
 /*
   Reads one bit from a slave
+  Delays sum: 62us
 
   Pulling a bus down initializes read time slot, which lasts 60us.
 
@@ -85,6 +88,7 @@ uint8_t oneWire_readBit(){
 
 /*
   Reads one byte from slave
+  Delays sum: 62*8=496
 */
 uint8_t oneWire_readByte(){
   uint8_t buffer = 0;
