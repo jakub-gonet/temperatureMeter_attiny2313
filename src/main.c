@@ -10,6 +10,7 @@ void setNumberInNixie(uint8_t tubeNumber, uint8_t number);
 void presetNixieNumberFromLookup(uint8_t number);
 void enableNixie(uint8_t tubeNumber);
 uint8_t convertTemp(uint16_t temp);
+uint8_t binaryToBCD(uint8_t number);
 
 /*
  * Lookup table is used because pins ABCD of 74141 isn't connected to one port, but two instead (B, D).
@@ -68,7 +69,8 @@ int main(){
         cycle++;
         break;
       case 7:
-        convertTemp((MSB<<8) | LSB);
+        sign = (MSB>>3) & 0x1;
+        temp = binaryToBCD(convertTemp((MSB<<8) | LSB));
         cycle = 0;
         break;
       }
@@ -92,6 +94,17 @@ uint8_t convertTemp(uint16_t temp){
   if((temp>>11) & 0x1)
     temp = ~temp + 1;
   return (temp>>4) & 0x7F;
+}
+
+uint8_t binaryToBCD(uint8_t number){
+  unsigned char MSD = 0;
+
+  while (number >= 10)
+    {
+      number -= 10;	// hex becomes 1s (LSD)
+      MSD += 0x10;  // add 1 to 10s (MSD)
+    }
+  return MSD + number; // pack BCD into char
 }
 
 void presetNixieNumberFromLookup(uint8_t number){
@@ -121,6 +134,7 @@ void enableNixie(uint8_t tubeNumber){
     break;
   }
 }
+
 void setNumberInNixie(uint8_t tubeNumber, uint8_t number){
   presetNixieNumberFromLookup(number);
   enableNixie(tubeNumber);
