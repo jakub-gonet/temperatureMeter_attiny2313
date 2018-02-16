@@ -66,9 +66,11 @@ int main(){
       case 7:
         sign = (MSB>>3) & 0x1;
         temp = binaryToBCD(convertTemp((MSB<<8) | LSB));
-        break;
       }
-      cycle = (cycle < 7 ? cycle+1 : 0);
+
+      cycle++;
+      if(cycle > 7)
+        cycle = 0;
     }
     sei();
   }
@@ -128,7 +130,6 @@ void enableNixie(uint8_t tubeNumber){
     break;
   case 2:
     PORTD |= (1<<V3);
-    break;
   }
 }
 
@@ -141,11 +142,17 @@ ISR(TIMER0_COMPA_vect){
   switch(currentTube){
   case 0:
     setNumberInNixie(0, sign);
+    currentTube++;
     break;
   case 1:
     setNumberInNixie(1, temp>>4);
+    currentTube++;
     break;
   case 2:
     setNumberInNixie(2, temp & 0x0F);
+    currentTube++;
+    break;
+  default:
+    currentTube = 0;
   }
 }
