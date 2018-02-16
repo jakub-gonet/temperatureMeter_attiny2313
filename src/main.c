@@ -5,11 +5,11 @@
 #include <avr/interrupt.h>
 #include <util/delay.h>
 
-void initPins(void);
+inline void init(void);
 void setNumberInNixie(uint8_t tubeNumber, uint8_t number);
-void presetNixieNumberFromLookup(uint8_t number);
-void enableNixie(uint8_t tubeNumber);
-uint8_t convertTemp(uint16_t temp);
+inline void presetNixieNumberFromLookup(uint8_t number);
+inline void enableNixie(uint8_t tubeNumber);
+inline uint8_t convertTemp(uint16_t temp);
 uint8_t binaryToBCD(uint8_t number);
 
 /*
@@ -19,6 +19,7 @@ uint8_t binaryToBCD(uint8_t number);
  * pattern: [DCBA]              0-0000 1-1000 2-0100 3-1100 4-0010 5-1010 6-0110 7-1110 8-0001 9-1001
  */
 uint8_t numbersLookupTable[] = {0b000, 0b100, 0b010, 0b110, 0b001, 0b101, 0b011, 0b111, 0b000, 0b100};
+uint8_t currentTube = 0;
 
 uint8_t sign = 0;
 uint8_t temp = 0;
@@ -31,9 +32,9 @@ int main(){
     _delay_ms(20);
     cli();
     if(!oneWire_ResetAndPresenceCheck()){
-      //DS18B20 not present, show -99
-      sign = 1;
-      temp = 0x99;
+      //DS18B20 not present, show ~00
+      sign = 2;
+      temp = 0x00;
     }
     else{
       uint8_t LSB = 0, MSB = 0;
@@ -42,38 +43,32 @@ int main(){
       case 0:
         oneWire_sendByte(0xCC); //SKIP ROM
         oneWire_sendByte(0x44); //CONVERT T
-        cycle++;
         break;
       case 1:
         sei();
         _delay_ms(750);
         cli();
-        cycle++;
         break;
       case 3:
         oneWire_ResetAndPresenceCheck();
-        cycle++;
         break;
       case 4:
         oneWire_sendByte(0xCC); //SKIP ROM
         oneWire_sendByte(0xBE); //READ SCRATCHPAD
-        cycle++;
         break;
       case 5:
         LSB = oneWire_readByte();
         MSB = oneWire_readByte();
-        cycle++;
         break;
       case 6:
         oneWire_ResetAndPresenceCheck();
-        cycle++;
         break;
       case 7:
         sign = (MSB>>3) & 0x1;
         temp = binaryToBCD(convertTemp((MSB<<8) | LSB));
-        cycle = 0;
         break;
       }
+      cycle = (cycle < 7 ? cycle+1 : 0);
     }
     sei();
   }
@@ -81,13 +76,16 @@ int main(){
 }
 
 void init(void){
-  initPins();
-}
-
-void initPins(void){
-  //every pin as output
   DDRB = 0xFF;
   DDRD = 0xFF;
+
+  // calculated with tube refresh freq:
+  //(F_CPU/num_of_tubes/OCR0A/prescaler)
+  //1000000/3/10/256 = 130 Hz for each tube
+  OCR0A = 10;
+  TCCR0A = (1<<WGM01);// Clear Timer on Compare Match (CTC) mode
+  TIMSK = (1<<OCIE0A);// TC0 compare match A interrupt enable
+  TCCR0B = (1<<CS02);//prescaler 256
 }
 
 uint8_t convertTemp(uint16_t temp){
@@ -97,13 +95,12 @@ uint8_t convertTemp(uint16_t temp){
 }
 
 uint8_t binaryToBCD(uint8_t number){
-  unsigned char MSD = 0;
+  uint8_t MSD = 0;
 
-  while (number >= 10)
-    {
-      number -= 10;	// hex becomes 1s (LSD)
-      MSD += 0x10;  // add 1 to 10s (MSD)
-    }
+  while (number >= 10){
+    number -= 10;	// hex becomes 1s (LSD)
+    MSD += 0x10;  // add 1 to 10s (MSD)
+  }
   return MSD + number; // pack BCD into char
 }
 
@@ -117,19 +114,19 @@ void presetNixieNumberFromLookup(uint8_t number){
 
 void enableNixie(uint8_t tubeNumber){
   //clear tube cathodes
-  PORTD &= ~(1<<V1)
+  PORTD = ~(1<<V1)
     & ~(1<<V2)
     & ~(1<<V3);
 
   //set choosen tube cathode
   switch(tubeNumber){
-  case 1:
+  case 0:
     PORTD |= (1<<V1);
     break;
-  case 2:
+  case 1:
     PORTD |= (1<<V2);
     break;
-  case 3:
+  case 2:
     PORTD |= (1<<V3);
     break;
   }
@@ -138,4 +135,17 @@ void enableNixie(uint8_t tubeNumber){
 void setNumberInNixie(uint8_t tubeNumber, uint8_t number){
   presetNixieNumberFromLookup(number);
   enableNixie(tubeNumber);
+}
+
+ISR(TIMER0_COMPA_vect){
+  switch(currentTube){
+  case 0:
+    setNumberInNixie(0, sign);
+    break;
+  case 1:
+    setNumberInNixie(1, temp>>4);
+    break;
+  case 2:
+    setNumberInNixie(2, temp & 0x0F);
+  }
 }
