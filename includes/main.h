@@ -16,6 +16,4 @@
 //DS18B20
 #define DQ PD3
 
-void init(void);
-
 #endif

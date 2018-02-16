@@ -10,6 +10,6 @@
 
 uint8_t oneWire_ResetAndPresenceCheck(void);
 void oneWire_sendByte(uint8_t byte);
-uint8_t oneWire_readByte();
+uint8_t oneWire_readByte(void);
 
 #endif
